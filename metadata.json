@@ -1,0 +1,6 @@
+{
+  "name": "CODEMIND",
+  "description": "AI-powered context-aware codebase analysis and developer onboarding platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

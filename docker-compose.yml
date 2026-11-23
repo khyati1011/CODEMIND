@@ -1,0 +1,80 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: codemind-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-codemind}
+      MYSQL_USER: ${MYSQL_USER:-codemind}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-codemind_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mongodb:
+    image: mongo:7
+    container_name: codemind-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: codemind-chroma
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  backend:
+    build: ./backend
+    container_name: codemind-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 5000
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MONGODB_URL: mongodb://mongodb:27017/codemind
+      CHROMA_URL: http://chromadb:8000
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    volumes:
+      - workspaces_data:/tmp/codemind-workspaces
+
+  frontend:
+    build: ./frontend
+    container_name: codemind-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  mongo_data:
+  chroma_data:
+  workspaces_data:
